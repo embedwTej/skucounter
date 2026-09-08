@@ -16,4 +16,3 @@ services:
 databases:
   - name: sku-counter-db
     databaseName: sku_counter
-    user: postgres
