@@ -123,6 +123,8 @@ def api_reset(body: ResetRequest = ResetRequest(), db: Session = Depends(get_db)
 
 
 if __name__ == "__main__":
+    import os
     import uvicorn
 
-    uvicorn.run("main:app", host=settings.host, port=settings.port, reload=True)
+    port = int(os.environ.get("PORT", settings.port))
+    uvicorn.run("main:app", host=settings.host, port=port)

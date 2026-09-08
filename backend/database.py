@@ -3,11 +3,16 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 
 from config import settings
 
+import re
+
 db_url = settings.database_url
 if db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql+psycopg2://", 1)
 elif db_url.startswith("postgresql://") and not db_url.startswith("postgresql+"):
     db_url = db_url.replace("postgresql://", "postgresql+psycopg2://", 1)
+
+# Strip channel_binding if present as it may not be supported by libpq in psycopg2
+db_url = re.sub(r'[&?]channel_binding=[^&]*', '', db_url)
 
 engine = create_engine(db_url, pool_pre_ping=True, future=True)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)
