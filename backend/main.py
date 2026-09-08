@@ -40,6 +40,11 @@ def on_startup():
     log.info("Database tables ensured.")
 
 
+@app.get("/")
+def root():
+    return {"status": "ok", "service": "SKU Counter API", "docs": "/docs"}
+
+
 # ---------------------------------------------------------------------------
 # WebSocket ingestion -- the device connects here and pushes one JSON
 # message per inspected part. See schemas.IncomingResult for the expected
