@@ -34,36 +34,45 @@ TINY_PNG_B64 = base64.b64encode(
 
 
 async def run(url: str, device: str, rate: float):
-    seq = 0
+    event_id = 0
     async with websockets.connect(url) as ws:
         print(f"Connected to {url} as {device}")
+        await ws.send(json.dumps({
+            "type": "hello",
+            "protocol": 1,
+            "station": {"id": device, "name": device, "product": "partcount", "version": "simulator"},
+            "capabilities": ["events", "images", "resets", "status", "replay", "commands"],
+            "retentionDays": 90,
+            "local": {"lastEventId": 0, "lastImageSeq": 0, "oldestImageSeq": 0},
+        }))
+        welcome = await ws.recv()
+        print(f"welcome -> {welcome}")
         while True:
-            seq += 1
+            event_id += 1
             sku = random.choice(SKUS)
             verdict = "PASS" if random.random() > 0.05 else "FAIL"
+            ts = dt.datetime.now(dt.timezone.utc)
             message = {
-                "device": device,
-                "seq": seq,
-                "tsUtc": dt.datetime.now(dt.timezone.utc).isoformat(),
-                "verdict": verdict,
-                "sku": sku["sku"],
-                "skuId": sku["skuId"],
-                "qty": 1,
-                "score": round(random.uniform(0.85, 0.99), 2),
-                "image": {
-                    "mime": "image/png",
-                    "width": 1,
-                    "height": 1,
-                    "bytes": len(TINY_PNG_B64),
-                    "base64": TINY_PNG_B64,
-                },
+                "type": "events",
+                "replayId": None,
+                "events": [{
+                    "id": event_id,
+                    "ts": ts.isoformat().replace("+00:00", "Z"),
+                    "date": ts.date().isoformat(),
+                    "skuId": sku["skuId"],
+                    "sku": sku["sku"],
+                    "qty": 1,
+                    "score": round(random.uniform(0.85, 0.99), 2),
+                }],
+                "cursor": event_id,
+                "hasMore": False,
             }
             await ws.send(json.dumps(message))
             try:
                 ack = await asyncio.wait_for(ws.recv(), timeout=2)
-                print(f"seq={seq} sku={sku['sku']} verdict={verdict} -> {ack}")
+                print(f"id={event_id} sku={sku['sku']} verdict={verdict} -> {ack}")
             except asyncio.TimeoutError:
-                print(f"seq={seq} sent, no ack received (timeout)")
+                print(f"id={event_id} sent, no ack received (timeout)")
 
             await asyncio.sleep(1.0 / rate)
 

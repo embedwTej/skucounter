@@ -12,17 +12,7 @@ class IncomingImage(BaseModel):
 
 
 class IncomingResult(BaseModel):
-    """
-    Shape of one JSON message pushed by the device over the websocket.
-    Mirrors the 'results' item in the PartCount Integration API doc.
-
-    NOTE: this is my best guess based on the REST payload you shared,
-    since I don't have a sample of the actual push message yet. If the
-    real websocket payload differs (extra fields, nested/batched, etc.),
-    send me one real example and I'll adjust this in five minutes --
-    everything downstream reads from this model, so that's the only
-    place a schema change needs to happen.
-    """
+    """Normalized single event used by the persistence layer."""
 
     device: str | None = None
     seq: int
@@ -33,6 +23,83 @@ class IncomingResult(BaseModel):
     qty: int = 1
     score: float | None = None
     image: IncomingImage | None = None
+
+
+class StationInfo(BaseModel):
+    id: str
+    name: str | None = None
+    product: str | None = None
+    version: str | None = None
+
+
+class HelloMessage(BaseModel):
+    type: str = "hello"
+    protocol: int = 1
+    station: StationInfo
+    capabilities: list[str] = Field(default_factory=list)
+    retentionDays: int | None = None
+    local: dict = Field(default_factory=dict)
+
+
+class SkuDefinition(BaseModel):
+    id: int
+    name: str
+    active: bool = True
+    deleted: bool = False
+    minScore: float | None = None
+
+
+class SkuMessage(BaseModel):
+    type: str = "skus"
+    skus: list[SkuDefinition] = Field(default_factory=list)
+
+
+class EventRecord(BaseModel):
+    id: int
+    ts: dt.datetime
+    date: dt.date
+    skuId: int
+    sku: str
+    qty: int = 1
+    score: float | None = None
+
+
+class EventsMessage(BaseModel):
+    type: str = "events"
+    replayId: str | None = None
+    events: list[EventRecord] = Field(default_factory=list)
+    cursor: int
+    hasMore: bool = False
+
+
+class ResetRecord(BaseModel):
+    id: int
+    ts: dt.datetime
+    source: str
+    note: str | None = None
+
+
+class ResetsMessage(BaseModel):
+    type: str = "resets"
+    replayId: str | None = None
+    resets: list[ResetRecord] = Field(default_factory=list)
+    cursor: int
+    hasMore: bool = False
+
+
+class ImagesMessage(BaseModel):
+    type: str = "images"
+    replayId: str | None = None
+    images: list[dict] = Field(default_factory=list)
+    cursor: int
+    hasMore: bool = False
+    gap: bool = False
+    skipped: int = 0
+
+
+class StatusMessage(BaseModel):
+    type: str = "status"
+    model_config = {"extra": "allow"}
 
 
 # ---- REST response shapes (used by the dashboard/report endpoints) ----
